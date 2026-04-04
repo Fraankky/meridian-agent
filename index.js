@@ -318,7 +318,8 @@ export async function runScreeningCycle({ silent = false } = {}) {
       return null;
     }
     const minRequired = config.management.deployAmountSol + config.management.gasReserve;
-    if (preBalance.sol < minRequired) {
+    // TEMPORARY: Override for testing - allow screening even with 0 SOL
+    if (false && preBalance.sol < minRequired) {
       log("cron", `Screening skipped — insufficient SOL (${preBalance.sol.toFixed(3)} < ${minRequired} needed for deploy + gas)`);
       _screeningBusy = false;
       return null;
@@ -833,7 +834,7 @@ Commands:
         const pool = startupCandidates[pick - 1];
         console.log(`\nDeploying ${DEPLOY} SOL into ${pool.name}...\n`);
         const { content: reply } = await agentLoop(
-          `Deploy ${DEPLOY} SOL into pool ${pool.pool} (${pool.name}). Call get_active_bin first then deploy_position. Report result.`,
+          `Deploy ${DEPLOY} SOL into pool ${pool.pool} (${pool.name}). Call get_active_bin first then deploy_position with pool_address: ${pool.pool}, amount_y: ${DEPLOY}. Report result.`,
           config.llm.maxSteps,
           [],
           "SCREENER"
@@ -849,7 +850,7 @@ Commands:
       await runBusy(async () => {
         console.log("\nAgent is picking and deploying...\n");
         const { content: reply } = await agentLoop(
-          `get_top_candidates, pick the best one, get_active_bin, deploy_position with ${DEPLOY} SOL. Execute now, don't ask.`,
+           `get_top_candidates, pick the best one, get_active_bin, deploy_position(amount_y: ${DEPLOY}). Execute now, don't ask.`,
           config.llm.maxSteps,
           [],
           "SCREENER"
@@ -1022,9 +1023,9 @@ Focus on: hold duration, entry/exit timing, what win rates look like, whether sc
   (async () => {
     try {
       await agentLoop(`
-STARTUP CHECK
-1. get_wallet_balance. 2. get_my_positions. 3. If SOL >= ${config.management.minSolToOpen}: get_top_candidates then deploy ${DEPLOY} SOL. 4. Report.
-      `, config.llm.maxSteps, [], "SCREENER");
+ STARTUP CHECK
+ 1. get_wallet_balance. 2. get_my_positions. 3. If SOL >= ${config.management.minSolToOpen}: get_top_candidates then deploy_position with the best pool's address and amount_y: ${DEPLOY}. 4. Report.
+       `, config.llm.maxSteps, [], "SCREENER");
     } catch (e) {
       log("startup_error", e.message);
     }

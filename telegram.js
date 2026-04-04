@@ -86,13 +86,28 @@ export async function sendHTML(html) {
 
 // ─── Long polling ────────────────────────────────────────────────
 async function poll(onMessage) {
+  let retryCount = 0;
+  const maxRetries = 5;
+  
   while (_polling) {
     try {
       const res = await fetch(
         `${BASE}/getUpdates?offset=${_offset}&timeout=30`,
         { signal: AbortSignal.timeout(35_000) }
       );
-      if (!res.ok) { await sleep(5000); continue; }
+      
+      // Reset retry count on successful connection
+      retryCount = 0;
+      
+      if (!res.ok) {
+        // Handle HTTP error responses (4xx, 5xx)
+        const errText = await res.text().catch(() => "Unknown error");
+        log("telegram_error", `Poll error: HTTP ${res.status} - ${errText.substring(0, 100)}`);
+        await sleep(Math.min(5000 * Math.pow(2, Math.min(retryCount, 4)), 30000)); // Exponential backoff up to 30s
+        retryCount++;
+        continue;
+      }
+      
       const data = await res.json();
       for (const update of data.result || []) {
         _offset = update.update_id + 1;
@@ -115,10 +130,24 @@ async function poll(onMessage) {
         await onMessage(msg.text);
       }
     } catch (e) {
+      // Handle network errors, timeouts, etc.
       if (!e.message?.includes("aborted")) {
-        log("telegram_error", `Poll error: ${e.message}`);
+        // Provide more specific error information
+        let errorMsg = e.message;
+        if (e.name === "TypeError") {
+          errorMsg = `Network error: ${e.message}`;
+        } else if (e.name === "FetchError") {
+          errorMsg = `Fetch error: ${e.message}`;
+        }
+        log("telegram_error", `Poll error: ${errorMsg}`);
       }
-      await sleep(5000);
+      
+      // Exponential backoff for network errors - use current retryCount before incrementing
+      const delay = Math.min(1000 * Math.pow(2, Math.min(retryCount, 6)), 30000); // Max 30s
+      await sleep(delay);
+      retryCount++;
+      
+      // Reset retry count after successful recovery (handled in try block)
     }
   }
 }

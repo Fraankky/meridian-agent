@@ -264,6 +264,12 @@ export async function executeTool(name, args) {
     return { error };
   }
 
+  // Default amount_y for deploy_position if not provided
+  if (name === "deploy_position" && !args.amount_y && !args.amount_sol) {
+    args.amount_y = config.management.deployAmountSol;
+    log("warn", `No amount_y provided, defaulting to deployAmountSol: ${args.amount_y}`);
+  }
+
   // ─── Pre-execution safety checks ──────────
   if (WRITE_TOOLS.has(name)) {
     const safetyCheck = await runSafetyChecks(name, args);

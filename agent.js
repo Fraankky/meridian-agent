@@ -82,7 +82,7 @@ const client = new OpenAI({
 });
 // Determine default model based on baseURL to ensure compatibility
 const isJatevoDefault = (process.env.LLM_BASE_URL || "").includes("jatevo.id");
-const DEFAULT_MODEL = process.env.LLM_MODEL || (isJatevoDefault ? "qwen3.5-plus" : "openrouter/healer-alpha");
+const DEFAULT_MODEL = process.env.LLM_MODEL || (isJatevoDefault ? "glm-4.7" : "openrouter/healer-alpha");
 
 /**
  * Core ReAct agent loop.
