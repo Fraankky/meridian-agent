@@ -69,20 +69,17 @@ import { config } from "./config.js";
 import { getStateSummary } from "./state.js";
 import { getLessonsForPrompt, getPerformanceSummary } from "./lessons.js";
 
-// Supports OpenRouter (default) or any OpenAI-compatible local server (e.g. LM Studio)
-// To use LM Studio: set LLM_BASE_URL=http://localhost:1234/v1 and LLM_API_KEY=lm-studio in .env
-const llmKey = process.env.LLM_API_KEY || process.env.JATEVO_API_KEY;
+const llmKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY;
 const client = new OpenAI({
-  baseURL: process.env.LLM_BASE_URL || "https://inference.jatevo.id/v1",
+  baseURL: process.env.LLM_BASE_URL || "https://openrouter.ai/api/v1",
   apiKey: llmKey,
   timeout: 5 * 60 * 1000,
   defaultHeaders: {
     "X-API-Key": llmKey,
   },
 });
-// Determine default model based on baseURL to ensure compatibility
-const isJatevoDefault = (process.env.LLM_BASE_URL || "").includes("jatevo.id");
-const DEFAULT_MODEL = process.env.LLM_MODEL || (isJatevoDefault ? "glm-4.7" : "openrouter/healer-alpha");
+
+const DEFAULT_MODEL = process.env.LLM_MODEL || "openrouter/minimax/minimax-m2.5";
 
 /**
  * Core ReAct agent loop.
